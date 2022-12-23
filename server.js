@@ -1,34 +1,45 @@
-const dotenv = require('dotenv').config()
-const express = require('express')
-const mongoose = require('mongoose')
+const dotenv = require('dotenv').config();
+const bodyParser = require('body-parser');
+const express = require('express');
+const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
 
-mongoose.set('strictQuery', false)
+const errorHandler = require('./middleware/errorMiddleware');
+const userRouter = require('./routes/userRoute');
+const productRouter = require('./routes/productRoute');
+const contactRouter = require('./routes/contactRoute');
 
-const app = express()
+mongoose.set('strictQuery', false);
 
-const PORT = process.env.PORT || 5000
+const app = express();
 
-app.get('/', (req, res) => {
-    res.send('Hi man!')
-})
+//Middlewares
+app.use(express.json());
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+app.use('/uploads', express.static('uploads'));
 
-async function main() {
-    try {
-        await mongoose.connect(process.env.MONGO_URI)
-        console.log('Connected to DB')
-        app.listen(PORT, () => {
-            console.log(`App listening on port ${PORT}`)
-        })
-    } catch (error) {
-        console.log(error)
-    }
-}
+//Routes Middlewares
+app.use('/api/users', userRouter);
+app.use('/api/product', productRouter);
+app.use('/api/contact', contactRouter);
 
-main()
-
-process.on("SIGINT", async () => {
-
-    await mongoose.disconnect();
-    console.log("App closed");
-    process.exit();
+app.get('/', async (req, res) => {
+    res.send('Hi man!');
 });
+
+//Error Middleware
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 5000;
+
+//Server starting
+mongoose
+    .connect(process.env.MONGO_URI)
+    .then(
+        app.listen(PORT, () => {
+            console.log(`Server listening on port ${PORT}`);
+        })
+    )
+    .catch((err) => console.log(err));
